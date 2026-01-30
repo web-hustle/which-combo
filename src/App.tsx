@@ -1,22 +1,31 @@
 
 
-import { useState } from "react";
 import { useRoom } from "./hooks/useRoom";
 import { useGameLogic } from "./hooks/useGameLogic";
-import Board from "./components/Board";
+import { CreateRoomScreen } from "./pages/CreateRoomScreen";
+import { JoinRoomScreen } from "./pages/JoinRoomScreen";
+import { PlacingScreen } from "./pages/PlacingScreen";
+import { WaitingScreen } from "./pages/WaitingScreen";
+import { forceBattleState } from "./utils/testSeeder";
+import { BattleScreen } from "./pages/BattleScreen";
 
 function App() {
   const { myId, roomId, roomData, loading, createRoom, joinRoom } = useRoom();
-  const { placeNumber, startGame } = useGameLogic(roomId, myId, roomData);
-  const [nickname, setNickname] = useState("");
+  const { placeNumber, startGame, submitCards } = useGameLogic(
+    roomId,
+    myId,
+    roomData
+  );
 
   if (loading) return <div>Loading</div>;
 
   if (!roomData) {
     return (
       <div>
-        <input onChange={(e) => setNickname(e.target.value)} value={nickname} />
-        <button onClick={() => createRoom(nickname || "host")}>생성</button>
+        <CreateRoomScreen onCreate={createRoom}></CreateRoomScreen>;
+        <button onClick={() => forceBattleState(roomId, myId)}>
+          forceBattleState
+        </button>
       </div>
     );
   }
@@ -25,54 +34,34 @@ function App() {
   const isGuest = roomData.guest?.uid === myId;
 
   if (!isHost && !isGuest) {
-    return (
-      <div>
-        <input onChange={(e) => setNickname(e.target.value)} value={nickname} />
-        <button onClick={() => joinRoom(nickname || "host")}>참가</button>
-      </div>
-    );
+    return <JoinRoomScreen onJoin={joinRoom}></JoinRoomScreen>;
   }
 
-  if (roomData && roomData.status === "placing") {
-    const myData = isHost ? roomData.host : roomData.guest;
-
-    if (!myData) return <div>Error</div>;
-
-    const myIndex = myData.currentSequenceIndex;
-    const isFinish = myIndex >= 25;
-
-    if (isFinish) {
+  switch (roomData.status) {
+    case "waiting":
       return (
-        <div style={{ textAlign: "center", padding: "32px" }}>
-          <h2>배치</h2>
-        </div>
+        <WaitingScreen
+          onStart={startGame}
+          roomData={roomData}
+          roomId={roomId}
+        ></WaitingScreen>
       );
-    }
-
-    return (
-      <div>
-        {roomData.numberSequence[myIndex]}
-        <Board board={myData.board} onCellClick={(idx) => placeNumber(idx)} />
-      </div>
-    );
+    case "placing":
+      return (
+        <PlacingScreen
+          roomData={roomData}
+          myId={myId}
+          onPlace={placeNumber}
+        ></PlacingScreen>
+      );
+    case "battle":
+      return (
+        <BattleScreen
+          roomData={roomData}
+          myId={myId}
+          submitCards={(ids) => submitCards(isHost ? "host" : "guest", ids)}
+        ></BattleScreen>
+      );
+    case "finished":
   }
-
-  const guestJoined = !!roomData.guest;
-
-  return (
-    <div>
-      <h2>Room: {roomId}</h2>
-      <h3>{roomData.host.nickname}</h3>
-      {guestJoined ? (
-        <div>
-          <h3>{roomData.guest?.nickname}</h3>
-          <button onClick={() => startGame()}>start</button>
-        </div>
-      ) : (
-        <span>waiting</span>
-      )}
-    </div>
-  );
 }
-
-export default App;

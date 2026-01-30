@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { db } from "../firebase"; // 아까 만든 firebase.ts
 import { ref, onValue, set, update, get } from "firebase/database";
@@ -42,11 +43,6 @@ export const useRoom = () => {
             const data = snapshot.val();
             setRoomData(data);
             setLoading(false);
-
-            // [디버깅용] 게스트 들어오면 콘솔 찍기
-            if (data && data.guest) {
-                console.log(data.guest);
-            }
         });
 
         return () => unsubscribe();

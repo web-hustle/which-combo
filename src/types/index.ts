@@ -21,6 +21,7 @@ export type Player = {
     score: number;
     completedLines: string[];
     currentSequenceIndex: number;
+    currentCards?: number[];
 };
 
 export interface RoomData {
@@ -42,3 +43,10 @@ export const INITIAL_PLAYER_STATE: Player = {
     completedLines: [],
     currentSequenceIndex: 0,
 };
+
+// for 편의성
+
+export interface CellType {
+    value: number;
+    status: "default" | "disabled" | "selected";
+}

@@ -1,6 +1,9 @@
-import { ref, update, get } from "firebase/database";
+
+
+import { ref, update, get, set } from "firebase/database";
 import { db } from "../firebase";
 import type { RoomData } from "../types/index";
+import { useEffect } from "react";
 
 export const useGameLogic = (
     roomId: string,
@@ -29,12 +32,12 @@ export const useGameLogic = (
         });
     };
 
+    const isHost = roomData?.host.uid === myId;
+
     // 2. 숫자 배치 (비동기 방식)
     const placeNumber = async (boardIndex: number) => {
         console.log(0);
         if (!roomData || !roomData.numberSequence) return;
-
-        const isHost = roomData.host.uid === myId;
         const myRole = isHost ? "host" : "guest";
         const myData = isHost ? roomData.host : roomData.guest;
 
@@ -75,5 +78,27 @@ export const useGameLogic = (
         }
     };
 
-    return { startGame, placeNumber };
+    const submitCards = async (myRole: string, ids: number[]) => {
+        await set(ref(db, `rooms/${roomId}/${myRole}/currentCards`), ids);
+    };
+
+    useEffect(() => {
+        if (!isHost) return;
+        const myCards = roomData?.host.currentCards;
+        const opponentCards = roomData?.guest?.currentCards;
+
+        if (myCards && opponentCards) {
+            // Todo 로직
+            const updates: any = {};
+            const newTurnCount = (roomData.turnCount || 0) + 1;
+            updates[`rooms/${roomId}/turnCount`] = newTurnCount;
+            updates[`rooms/${roomId}/host/currentCards`] = null;
+            updates[`rooms/${roomId}/guest/currentCards`] = null;
+            //   updates[`rooms/${roomId}/host/score`] = null;
+
+            update(ref(db), updates);
+        }
+    }, []);
+
+    return { startGame, placeNumber, submitCards };
 };
