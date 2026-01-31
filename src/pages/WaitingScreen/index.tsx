@@ -1,26 +1,31 @@
 import type { RoomData } from "../../types";
+import Button from '../../components/Button/Button'
 
 interface Props {
     roomData: RoomData;
     roomId: string;
     onStart: () => void;
+    isHost: boolean;
 }
 
-export const WaitingScreen = ({ roomData, roomId, onStart }: Props) => {
+export const WaitingScreen = ({ roomData, roomId, onStart, isHost }: Props) => {
     const guestJoined = !!roomData.guest;
 
     return (
-        <div>
-            <h2>Room: {roomId}</h2>
-            <h3>{roomData.host.nickname}</h3>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <h2>방 번호: {roomId}</h2>
+            <div style={{ fontSize: '20px', color: '#666', marginBottom: '24px' }}>
+                <span>{roomData.host.nickname}</span>{guestJoined ? <span> vs {roomData.guest?.nickname}</span> : null}
+            </div>
             {guestJoined ? (
                 <div>
-                    <h3>{roomData.guest?.nickname}</h3>
-                    <button onClick={() => onStart()}>start</button>forceBattleState
+                    {isHost ? <Button onClick={onStart} label={'시작'}></Button> : ''}
                 </div>
             ) : (
-                <span>waiting</span>
-            )}
-        </div>
+                <div>게스트 입장 대기중...</div>
+            )
+            }
+
+        </div >
     );
 };

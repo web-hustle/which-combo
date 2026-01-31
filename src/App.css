@@ -1,5 +1,8 @@
 body {
   width: 100vw;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 #root {

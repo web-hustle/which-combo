@@ -6,7 +6,6 @@ import { CreateRoomScreen } from "./pages/CreateRoomScreen";
 import { JoinRoomScreen } from "./pages/JoinRoomScreen";
 import { PlacingScreen } from "./pages/PlacingScreen";
 import { WaitingScreen } from "./pages/WaitingScreen";
-import { forceBattleState } from "./utils/testSeeder";
 import { BattleScreen } from "./pages/BattleScreen";
 
 import './App.css';
@@ -24,10 +23,7 @@ function App() {
   if (!roomData) {
     return (
       <div>
-        <CreateRoomScreen onCreate={createRoom}></CreateRoomScreen>;
-        <button onClick={() => forceBattleState(roomId, myId)}>
-          forceBattleState
-        </button>
+        <CreateRoomScreen onCreate={createRoom}></CreateRoomScreen>
       </div>
     );
   }
@@ -46,6 +42,7 @@ function App() {
           onStart={startGame}
           roomData={roomData}
           roomId={roomId}
+          isHost={isHost}
         ></WaitingScreen>
       );
     case "placing":

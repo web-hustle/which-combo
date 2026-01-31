@@ -29,10 +29,17 @@ export const PlacingScreen = ({ roomData, myId, onPlace }: Props) => {
         status: num === 0 ? "default" : "disabled",
     }));
 
+    const placeIfPossible = (idx: number) => {
+        if (statusBoard[idx].status === 'default') {
+            onPlace(idx)
+        }
+    }
+
     return (
         <div>
-            {roomData.numberSequence[myIndex]}
-            <Board board={statusBoard} onCellClick={(idx) => onPlace(idx)} />
+            <h3>이번에 배치할 카드</h3>
+            <h1>{roomData.numberSequence[myIndex]}</h1>
+            <Board board={statusBoard} onCellClick={(idx) => placeIfPossible(idx)} />
         </div>
     );
 };
