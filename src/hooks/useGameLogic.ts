@@ -237,21 +237,27 @@ export const useGameLogic = (
                 doBattle();
             }
         }
-
         if (roomData.status === 'result_check') {
             const timer = setTimeout(() => {
-                const updates: any = {};
                 const roomRef = ref(db, `rooms/${roomId}`);
+                const updates: any = {};
 
-                // 🔥 여기서 진짜 청소 및 다음 턴 진행
-                updates[`status`] = 'battle'; // 다시 게임 시작
-                updates[`turnCount`] = (roomData.turnCount || 0) + 1;
-                updates[`host/currentCards`] = null;
-                updates[`guest/currentCards`] = null;
-                updates[`lastResult`] = null;
+                const currentTurn = roomData.turnCount || 1;
+                const nextTurn = currentTurn + 1;
+
+                if (nextTurn > 12) {
+                    updates[`status`] = 'finished';
+                } else {
+                    console.log(`⚔️ 다음 라운드 진행: ${nextTurn}`);
+                    updates[`status`] = 'battle';
+                    updates[`turnCount`] = nextTurn;
+                    updates[`host/currentCards`] = null;
+                    updates[`guest/currentCards`] = null;
+                    updates[`lastResult`] = null;
+                }
 
                 update(roomRef, updates);
-            }, 4000);
+            }, 3000); // 3초 대기
 
             return () => clearTimeout(timer); // 클린업 필수
         }
