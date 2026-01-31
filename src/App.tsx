@@ -9,6 +9,8 @@ import { WaitingScreen } from "./pages/WaitingScreen";
 import { forceBattleState } from "./utils/testSeeder";
 import { BattleScreen } from "./pages/BattleScreen";
 
+import './App.css';
+
 function App() {
   const { myId, roomId, roomData, loading, createRoom, joinRoom } = useRoom();
   const { placeNumber, startGame, submitCards } = useGameLogic(
@@ -65,3 +67,5 @@ function App() {
     case "finished":
   }
 }
+
+export default App;
