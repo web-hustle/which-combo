@@ -54,6 +54,7 @@ function App() {
         ></PlacingScreen>
       );
     case "battle":
+    case "result_check":
       return (
         <BattleScreen
           roomData={roomData}

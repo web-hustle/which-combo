@@ -1,8 +1,14 @@
-export type GameStatus = "waiting" | "placing" | "battle" | "finished";
+export type GameStatus = "waiting" | "placing" | "battle" | "finished" | "result_check";
 
 export type PlayerRole = "host" | "guest" | "spectator";
 
 export type BoardState = number[];
+
+export interface HandResult {
+    score: number;
+    rank: string;
+    highlight: number[];
+}
 
 export type HandRank =
     | "Quad"
@@ -32,6 +38,11 @@ export interface RoomData {
     numberSequence: number[];
     turnCount: number;
     winner?: "host" | "guest" | "draw";
+    lastResult?: {
+        hostCards: number[];
+        guestCards: number[];
+        winner: "host" | "guest" | "draw";
+    };
 }
 
 export const INITIAL_PLAYER_STATE: Player = {

@@ -83,13 +83,17 @@ export const useGameLogic = (
         await set(ref(db, `rooms/${roomId}/${myRole}/currentCards`), ids);
     };
 
-    const doBattle = async () => {// optional chaining은 좋지만, 확실한 로직을 위해 존재 여부 체크
+    const doBattle = async () => {
+        // 1. 방어 로직 (기존 동일)
         if (!roomData || !roomData.guest || !isHost) return;
+        // 🔥 [핵심] 이미 결과 확인 중이면 배틀 로직 또 돌지 않게 막기
+        if (roomData.status !== 'battle') return;
+
         const { host, guest } = roomData;
+        const hostTurn = host.currentCards;
+        const guestTurn = guest.currentCards;
 
-        const hostTurn = roomData.host.currentCards; // 변수명 Index -> Turn or Indices 추천
-        const guestTurn = roomData.guest?.currentCards;
-
+        // 2. 카드 존재 확인 (기존 동일)
         if (hostTurn?.length === 4 && guestTurn?.length === 4) {
             const hostCards = hostTurn.map(idx => host.board[idx]);
             const guestCards = guestTurn.map(idx => guest.board[idx]);
@@ -100,19 +104,19 @@ export const useGameLogic = (
             const roomRef = ref(db, `rooms/${roomId}`);
             const updates: any = {};
 
+            // 3. 점수 반영 (기존 동일)
             if (hostPoint > guestPoint) {
-                updates[`host/score`] = (roomData.host.score || 0) + 1;
+                updates[`host/score`] = (host.score || 0) + 1;
             } else if (guestPoint > hostPoint) {
-                updates[`guest/score`] = (roomData.guest.score || 0) + 1;
-            } else {
+                updates[`guest/score`] = (guest.score || 0) + 1;
             }
 
-            // 공통 업데이트
-            updates[`turnCount`] = (roomData.turnCount || 0) + 1;
-            updates[`host/currentCards`] = null;
-            updates[`guest/currentCards`] = null;
+            // 4. 🔥 [수정됨] 청소 코드 삭제함!
+            // updates[`turnCount`] = ... (여기서 안 함)
+            // updates[`host/currentCards`] = null; (여기서 안 함)
 
-            // (선택) 결과 확인을 위해 lastResult 저장 추천
+            // 5. 🔥 [핵심] 상태를 'result_check'로 변경하고 결과 저장
+            updates[`status`] = 'result_check';
             updates[`lastResult`] = {
                 hostCards,
                 guestCards,
@@ -183,8 +187,35 @@ export const useGameLogic = (
     };
 
     useEffect(() => {
-        doBattle();
-    }, [roomData]);
+        if (!roomData || !isHost) return;
+
+        // Case A: 배틀 페이즈 -> 카드 다 모이면 승부(doBattle) 실행
+        if (roomData.status === 'battle') {
+            const hostReady = roomData.host.currentCards?.length === 4;
+            const guestReady = roomData.guest?.currentCards?.length === 4;
+
+            if (hostReady && guestReady) {
+                doBattle();
+            }
+        }
+
+        if (roomData.status === 'result_check') {
+            const timer = setTimeout(() => {
+                const updates: any = {};
+                const roomRef = ref(db, `rooms/${roomId}`);
+
+                // 🔥 여기서 진짜 청소 및 다음 턴 진행
+                updates[`status`] = 'battle'; // 다시 게임 시작
+                updates[`turnCount`] = (roomData.turnCount || 0) + 1;
+                updates[`host/currentCards`] = null;
+                updates[`guest/currentCards`] = null;
+
+                update(roomRef, updates);
+            }, 7000); // 3초 대기
+
+            return () => clearTimeout(timer); // 클린업 필수
+        }
+    }, [roomData]); // roomData가 바뀔 때마다 감시
 
     return { startGame, placeNumber, submitCards };
 };
