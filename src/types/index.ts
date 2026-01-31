@@ -30,6 +30,13 @@ export type Player = {
     currentCards?: number[];
 };
 
+export interface HandAnalysis {
+  cards: number[];      // 실제 냈던 카드 4장 (예: [10, 10, 9, 2])
+  score: number;        // 계산된 점수 (예: 32009)
+  rank: string;         // 족보 이름 (예: "Two Pair")
+  highlight: number[];  // 강조할 숫자들 (예: [10, 10])
+}
+
 export interface RoomData {
     roomId: string;
     status: GameStatus;
@@ -39,8 +46,8 @@ export interface RoomData {
     turnCount: number;
     winner?: "host" | "guest" | "draw";
     lastResult?: {
-        hostCards: number[];
-        guestCards: number[];
+        hostHand: HandAnalysis;
+        guestHand: HandAnalysis;
         winner: "host" | "guest" | "draw";
     };
 }
