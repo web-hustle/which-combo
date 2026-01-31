@@ -3,6 +3,7 @@ import Board from "../../components/Board";
 import type { CellType, RoomData } from "../../types";
 import { isValidSubset } from "../../utils/isValidSubmit";
 import HandResult from "../../components/HandResult";
+import { findPatternByIndices } from '../../types';
 
 interface Props {
     roomData: RoomData;
@@ -25,6 +26,8 @@ export const BattleScreen = ({ roomData, myId, submitCards }: Props) => {
         status: selectedIds.includes(idx) ? "selected" : "default",
     }));
 
+    const completedLineIds = myData.completedLines || [];
+
     const onSelect = (idx: number) => {
         if (selectedIds.includes(idx)) {
             setSelectedIds(prev => prev.filter(i => i !== idx));
@@ -42,6 +45,13 @@ export const BattleScreen = ({ roomData, myId, submitCards }: Props) => {
 
             setSelectedIds(newIds);
             if (newIds.length === 4) {
+                const pattern = findPatternByIndices(newIds);
+
+                if (pattern && completedLineIds.includes(pattern.id)) {
+                    alert("이미 사용한 패턴입니다");
+                    setSelectedIds([]);
+                    return;
+                }
                 submitCards(newIds);
             }
         }

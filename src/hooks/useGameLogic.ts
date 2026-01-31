@@ -2,7 +2,7 @@
 
 import { ref, update, get, set } from "firebase/database";
 import { db } from "../firebase";
-import type { HandResult, RoomData } from "../types/index";
+import { findPatternByIndices, type HandResult, type RoomData } from "../types/index";
 import { useEffect } from "react";
 
 export const useGameLogic = (
@@ -102,7 +102,17 @@ export const useGameLogic = (
             const hostResult = calcPointOf(hostCards);
             const guestResult = calcPointOf(guestCards);
 
+            const hostPattern = findPatternByIndices(hostTurn);
+            const guestPattern = findPatternByIndices(guestTurn);
+
+            // 2. 기존 completedLines 가져오기
+            const hostLines = roomData.host.completedLines || [];
+            const guestLines = roomData.guest.completedLines || [];
+
             const updates: any = {};
+
+            if (hostPattern) updates[`host/completedLines`] = [...hostLines, hostPattern.id];
+            if (guestPattern) updates[`guest/completedLines`] = [...guestLines, guestPattern.id];
 
             // 점수 비교 (score 속성끼리 비교)
             if (hostResult.score > guestResult.score) {
