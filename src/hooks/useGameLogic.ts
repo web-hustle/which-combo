@@ -1,6 +1,6 @@
 
 
-import { ref, update, get, set } from "firebase/database";
+import { ref, update, get, set, onDisconnect } from "firebase/database";
 import { db } from "../firebase";
 import { findPatternByIndices, type HandResult, type RoomData } from "../types/index";
 import { useEffect } from "react";
@@ -11,14 +11,16 @@ export const useGameLogic = (
     roomData: RoomData | null
 ) => {
     // 1. 게임 시작 (Host)
+
+    const generateRandomSequence = () => {
+        return Array.from({ length: 25 }, () => Math.floor(Math.random() * 10) + 1);
+    };
+
     const startGame = async () => {
         if (!roomId || !roomData) return;
 
         // 25개 난수 생성
-        const sequence = Array.from(
-            { length: 25 },
-            () => Math.floor(Math.random() * 10) + 1
-        );
+        const sequence = generateRandomSequence();
 
         await update(ref(db, `rooms/${roomId}`), {
             status: "placing",
@@ -160,51 +162,51 @@ export const useGameLogic = (
         const mainNum = pattern[0].num;
         const maxCount = pattern[0].count;
 
-        // 1. 로티플 (전체 강조)
-        if (isRotifle) {
-            return {
-                score: 70000 + Math.max(...cards),
-                rank: 'Rotifle',
-                highlight: cards // 전체 강조
-            };
-        }
-
-        // 2. 포카드 (해당 숫자만 강조)
+        // 1. 포카드 (4장 동일)
         if (maxCount === 4) {
             return {
-                score: 60000 + mainNum,
-                rank: 'Four Card',
+                score: 70000 + mainNum,
+                rank: '포카드',
                 highlight: [mainNum]
             };
         }
 
-        // 3. 스트레이트 (전체 강조)
+        // 2. 로티플 (연속된 4장)
+        if (isRotifle) {
+            return {
+                score: 60000 + Math.max(...cards),
+                rank: '로티플',
+                highlight: cards // 전체 강조
+            };
+        }
+
+        // 3. 스트레이트 (순서가 꼬인 연속된 4장)
         const isStraight = (sorted[0] - sorted[1] === 1) && (sorted[1] - sorted[2] === 1) && (sorted[2] - sorted[3] === 1);
         if (isStraight) {
             return {
                 score: 50000 + sorted[0],
-                rank: 'Straight',
+                rank: '스트레이트',
                 highlight: cards // 전체 강조
             };
         }
 
-        // 4. 트리플 (해당 숫자만 강조)
-        if (maxCount === 3) {
-            return {
-                score: 40000 + mainNum,
-                rank: 'Triple',
-                highlight: [mainNum]
-            };
-        }
-
-        // 5. 투페어 (두 페어 숫자 모두 강조)
+        // 4. 투페어 (두 쌍 강조)
         if (maxCount === 2 && pattern[1].count === 2) {
             const bigPair = pattern[0].num;
             const smallPair = pattern[1].num;
             return {
-                score: 30000 + (bigPair * 100) + smallPair,
-                rank: 'Two Pair',
+                score: 40000 + (bigPair * 100) + smallPair,
+                rank: '투페어',
                 highlight: [bigPair, smallPair]
+            };
+        }
+
+        // 5. 트리플 (3장 동일)
+        if (maxCount === 3) {
+            return {
+                score: 30000 + mainNum,
+                rank: '트리플',
+                highlight: [mainNum]
             };
         }
 
@@ -212,7 +214,7 @@ export const useGameLogic = (
         if (maxCount === 2) {
             return {
                 score: 20000 + mainNum,
-                rank: 'One Pair',
+                rank: '원페어',
                 highlight: [mainNum]
             };
         }
@@ -220,9 +222,45 @@ export const useGameLogic = (
         // 7. 하이카드 (가장 높은 숫자 하나만 강조)
         return {
             score: 10000 + sorted[0],
-            rank: 'High Card',
+            rank: '하이카드',
             highlight: [sorted[0]]
         };
+    };
+
+    const restartGame = () => {
+        if (!isHost) return;
+
+        const updates: any = {};
+
+        // 1. Room 공통 데이터 리셋
+        const newSequence = generateRandomSequence(); // 🔥 공통 시퀀스 생성
+
+        updates['status'] = 'placing';       // 배치 단계로 회귀
+        updates['turnCount'] = 1;            // 턴 초기화
+        updates['numberSequence'] = newSequence; // 25개 숫자 공유
+        updates['lastResult'] = null;        // 이전 결과 삭제
+        updates['winner'] = null;            // 승자 정보 삭제
+
+        // 2. 플레이어 초기화 (Host & Guest 공통)
+        // board는 0으로 채워서 '빈 칸'임을 명시
+        const emptyBoard = Array(25).fill(0);
+
+        // --- HOST ---
+        updates['host/board'] = emptyBoard;
+        updates['host/score'] = 0;
+        updates['host/completedLines'] = [];
+        updates['host/currentSequenceIndex'] = 0;
+        updates['host/currentCards'] = null;
+
+        // --- GUEST ---
+        updates['guest/board'] = emptyBoard;
+        updates['guest/score'] = 0;
+        updates['guest/completedLines'] = [];
+        updates['guest/currentSequenceIndex'] = 0;
+        updates['guest/currentCards'] = null;
+
+        // DB 업데이트
+        update(ref(db, `rooms/${roomId}`), updates);
     };
 
     useEffect(() => {
@@ -237,6 +275,8 @@ export const useGameLogic = (
                 doBattle();
             }
         }
+
+        // Case B: 결과 확인 후 -> 일정 시간 뒤 다음 라운드 or 게임 종료
         if (roomData.status === 'result_check') {
             const timer = setTimeout(() => {
                 const roomRef = ref(db, `rooms/${roomId}`);
@@ -245,10 +285,9 @@ export const useGameLogic = (
                 const currentTurn = roomData.turnCount || 1;
                 const nextTurn = currentTurn + 1;
 
-                if (nextTurn > 12) {
+                if (nextTurn > 3) {
                     updates[`status`] = 'finished';
                 } else {
-                    console.log(`⚔️ 다음 라운드 진행: ${nextTurn}`);
                     updates[`status`] = 'battle';
                     updates[`turnCount`] = nextTurn;
                     updates[`host/currentCards`] = null;
@@ -263,5 +302,16 @@ export const useGameLogic = (
         }
     }, [roomData]);
 
-    return { startGame, placeNumber, submitCards };
+    useEffect(() => {
+        if (isHost && roomId) {
+            const roomRef = ref(db, `rooms/${roomId}`);
+
+            onDisconnect(roomRef).remove();
+            console.log('HOST DISCONNECT');
+            // TODO: 게스트에게 호스트가 나갔음을 알림
+            // onDisconnect(roomRef).update({ status: 'host_disconnected' });
+        }
+    }, [isHost, roomId]);
+
+    return { startGame, placeNumber, submitCards, restartGame };
 };

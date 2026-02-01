@@ -12,7 +12,7 @@ import './App.css';
 
 function App() {
   const { myId, roomId, roomData, loading, createRoom, joinRoom } = useRoom();
-  const { placeNumber, startGame, submitCards } = useGameLogic(
+  const { placeNumber, startGame, submitCards, restartGame } = useGameLogic(
     roomId,
     myId,
     roomData
@@ -63,6 +63,9 @@ function App() {
         ></BattleScreen>
       );
     case "finished":
+      return <div><h1>게임 종료 화면 (TODO)</h1>
+        <div>{isHost && <button onClick={restartGame}>다시하기</button>}</div>
+      </div>
   }
 }
 
