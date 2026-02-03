@@ -58,7 +58,7 @@ export const useRoom = () => {
             host: {
                 uid: myId,
                 nickname,
-                isReady: true,
+                isReady: false,
                 board: INITIAL_BOARD,
                 score: 0,
                 completedLines: [],
@@ -79,7 +79,7 @@ export const useRoom = () => {
         const guestData: Player = {
             uid: myId,
             nickname,
-            isReady: true,
+            isReady: false,
             board: INITIAL_BOARD,
             score: 0,
             completedLines: [],

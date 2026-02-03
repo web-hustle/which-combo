@@ -1,6 +1,7 @@
 import React from "react";
 import styles from "./Board.module.scss";
 import type { CellType } from "../types";
+import { getCellName } from "../utils/getFunction";
 
 interface BoardProps {
     board: CellType[]; // [0, 7, 0, 3, ...] 형태의 25개 배열
@@ -18,16 +19,6 @@ const Board: React.FC<BoardProps> = ({ board, onCellClick, disabled = false }) =
             return styles.default;
         }
     };
-
-    const getCellName = (num: number) => {
-        let name = '';
-        const labels = ['A', 'B', 'C', 'D', 'E'];
-        const index = Math.floor(num / 5);
-        
-        name = labels[index] || '';
-        name += (num % 5) + 1;
-        return name;
-    }
 
     return (
         <div className={styles.gridStyle}>

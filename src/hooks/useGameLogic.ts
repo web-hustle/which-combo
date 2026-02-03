@@ -2,7 +2,12 @@
 
 import { ref, update, get, set, onDisconnect } from "firebase/database";
 import { db } from "../firebase";
-import { findPatternByIndices, type HandResult, type RoomData } from "../types/index";
+import {
+    findPatternByIndices,
+    type CellInfo,
+    type HandResult,
+    type RoomData,
+} from "../types/index";
 import { useEffect } from "react";
 
 export const useGameLogic = (
@@ -38,12 +43,14 @@ export const useGameLogic = (
 
     // 2. 숫자 배치 (비동기 방식)
     const placeNumber = async (boardIndex: number) => {
-        console.log(0);
         if (!roomData || !roomData.numberSequence) return;
         const myRole = isHost ? "host" : "guest";
-        const myData = isHost ? roomData.host : roomData.guest;
+        const opponentRole = isHost ? "guest" : "host";
 
-        if (!myData) return;
+        const myData = isHost ? roomData.host : roomData.guest;
+        const opponentData = isHost ? roomData.guest : roomData.host;
+
+        if (!myData || !opponentData) return;
 
         // 이미 배치 끝난 사람이 또 눌렀을 때 방어
         if (myData.currentSequenceIndex >= 25) return;
@@ -52,21 +59,42 @@ export const useGameLogic = (
         const targetNumber = roomData.numberSequence[myData.currentSequenceIndex];
         const nextIndex = myData.currentSequenceIndex + 1;
 
-        // [중요] 내 상태만 업데이트 (Board + Index)
+        const lastPlacedCard: CellInfo = {
+            card: targetNumber,
+            boardIndex: boardIndex,
+        };
+
+        // const opponentLastCard = opponentData.lastPlacedCard;
+        // if (!opponentLastCard) {
+        //   return;
+        // }
+
         const updates: any = {};
-        updates[`rooms/${roomId}/${myRole}/board/${boardIndex}`] = targetNumber;
-        updates[`rooms/${roomId}/${myRole}/currentSequenceIndex`] = nextIndex;
+        updates[`rooms/${roomId}/${myRole}/isReady`] = true;
+        updates[`rooms/${roomId}/${myRole}/lastPlacedCard`] = lastPlacedCard;
+        updates[`rooms/${roomId}/${myRole}/board/${lastPlacedCard.boardIndex}`] =
+            lastPlacedCard.card;
 
         await update(ref(db), updates);
-        // 3. 게임 단계 전환 체크 (모두 완료했는가?)
-        checkAllReady(myRole, nextIndex);
+
+        if (opponentData?.isReady && opponentData.lastPlacedCard) {
+            if (nextIndex < 25) {
+                const updates: any = {};
+                updates[`rooms/${roomId}/${myRole}/isReady`] = false;
+                updates[`rooms/${roomId}/${myRole}/currentSequenceIndex`] = nextIndex;
+
+                updates[`rooms/${roomId}/${opponentRole}/isReady`] = false;
+                updates[`rooms/${roomId}/${opponentRole}/currentSequenceIndex`] =
+                    nextIndex;
+
+                await update(ref(db), updates);
+            } else {
+                toBattlePhase(myRole);
+            }
+        }
     };
 
-    // 내부 함수: 둘 다 25개를 채웠는지 확인
-    const checkAllReady = async (myRole: string, myNextIndex: number) => {
-        // 내 인덱스가 25가 아니면 굳이 상대방 확인할 필요 없음
-        if (myNextIndex < 25) return;
-
+    const toBattlePhase = async (myRole: string) => {
         // 나는 다 채웠음. 이제 상대방 확인
         const opponentRole = myRole === "host" ? "guest" : "host";
         const snapshot = await get(

@@ -28,17 +28,6 @@ export interface HandAnalysis {
     highlight: number[];  // 강조할 숫자들 (예: [10, 10])
 }
 
-export type Player = {
-    uid: string;
-    nickname: string;
-    isReady: boolean;
-    board: BoardState;
-    score: number;
-    completedLines: string[];
-    currentSequenceIndex: number;
-    currentCards?: number[];
-};
-
 export interface RoomData {
     roomId: string;
     status: GameStatus;
@@ -54,14 +43,21 @@ export interface RoomData {
     };
 }
 
-export const INITIAL_PLAYER_STATE: Player = {
-    uid: "",
-    nickname: "",
-    isReady: false,
-    board: Array(25).fill(0),
-    score: 0,
-    completedLines: [],
-    currentSequenceIndex: 0,
+export interface CellInfo {
+    card: number;
+    boardIndex: number;
+}
+
+export type Player = {
+    uid: string;
+    nickname: string;
+    isReady: boolean;
+    board: BoardState;
+    score: number;
+    completedLines: string[];
+    currentSequenceIndex: number;
+    currentCards?: number[];
+    lastPlacedCard?: CellInfo;
 };
 
 export interface CellType {
