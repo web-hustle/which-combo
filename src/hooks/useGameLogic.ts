@@ -64,11 +64,6 @@ export const useGameLogic = (
             boardIndex: boardIndex,
         };
 
-        // const opponentLastCard = opponentData.lastPlacedCard;
-        // if (!opponentLastCard) {
-        //   return;
-        // }
-
         const updates: any = {};
         updates[`rooms/${roomId}/${myRole}/isReady`] = true;
         updates[`rooms/${roomId}/${myRole}/lastPlacedCard`] = lastPlacedCard;
@@ -79,37 +74,27 @@ export const useGameLogic = (
 
         if (opponentData?.isReady && opponentData.lastPlacedCard) {
             if (nextIndex < 25) {
-                const updates: any = {};
-                updates[`rooms/${roomId}/${myRole}/isReady`] = false;
-                updates[`rooms/${roomId}/${myRole}/currentSequenceIndex`] = nextIndex;
+                const updateForNextTurn: any = {};
+                updateForNextTurn[`rooms/${roomId}/${myRole}/isReady`] = false;
+                updateForNextTurn[`rooms/${roomId}/${myRole}/currentSequenceIndex`] = nextIndex;
 
-                updates[`rooms/${roomId}/${opponentRole}/isReady`] = false;
-                updates[`rooms/${roomId}/${opponentRole}/currentSequenceIndex`] =
+                updateForNextTurn[`rooms/${roomId}/${opponentRole}/isReady`] = false;
+                updateForNextTurn[`rooms/${roomId}/${opponentRole}/currentSequenceIndex`] =
                     nextIndex;
 
-                await update(ref(db), updates);
+                await update(ref(db), updateForNextTurn);
             } else {
-                toBattlePhase(myRole);
+                const updateForBattle: any = {};
+                updateForBattle[`rooms/${roomId}/${myRole}/isReady`] = false;
+                updateForBattle[`rooms/${roomId}/${opponentRole}/isReady`] = false;
+                updateForBattle[`rooms/${roomId}/status`] = 'battle';
+                
+                await update(ref(db), updateForBattle);
             }
         }
     };
 
-    const toBattlePhase = async (myRole: string) => {
-        // 나는 다 채웠음. 이제 상대방 확인
-        const opponentRole = myRole === "host" ? "guest" : "host";
-        const snapshot = await get(
-            ref(db, `rooms/${roomId}/${opponentRole}/currentSequenceIndex`)
-        );
-        const opponentIndex = snapshot.val();
-
-        // 상대방도 25라면 -> 배틀 시작!
-        if (opponentIndex >= 25) {
-            await update(ref(db, `rooms/${roomId}`), { status: "battle" });
-        }
-    };
-
     const submitCards = async (myRole: string, ids: number[]) => {
-        console.log(`rooms/${roomId}/${myRole}/currentCards`, ids)
         await set(ref(db, `rooms/${roomId}/${myRole}/currentCards`), ids);
     };
 
@@ -335,7 +320,6 @@ export const useGameLogic = (
             const roomRef = ref(db, `rooms/${roomId}`);
 
             onDisconnect(roomRef).remove();
-            console.log('HOST DISCONNECT');
             // TODO: 게스트에게 호스트가 나갔음을 알림
             // onDisconnect(roomRef).update({ status: 'host_disconnected' });
         }
