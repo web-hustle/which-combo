@@ -43,7 +43,7 @@ export const useGameLogic = (
 
     // 2. 숫자 배치 (비동기 방식)
     const placeNumber = async (boardIndex: number) => {
-    if (!roomId || !roomData.numberSequence) return;
+    if (!roomId || !roomData?.numberSequence) return;
     
     await runTransaction(ref(db, `rooms/${roomId}`), (room) => {
         if (!room) return;
