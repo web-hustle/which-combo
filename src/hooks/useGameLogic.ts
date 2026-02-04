@@ -290,7 +290,7 @@ export const useGameLogic = (
                 const currentTurn = roomData.turnCount || 1;
                 const nextTurn = currentTurn + 1;
 
-                if (nextTurn > 3) {
+                if (nextTurn > 12) {
                     updates[`status`] = 'finished';
                 } else {
                     updates[`status`] = 'battle';
