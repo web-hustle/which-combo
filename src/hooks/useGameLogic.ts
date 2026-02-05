@@ -88,7 +88,7 @@ export const useGameLogic = (
                 updateForBattle[`rooms/${roomId}/${myRole}/isReady`] = false;
                 updateForBattle[`rooms/${roomId}/${opponentRole}/isReady`] = false;
                 updateForBattle[`rooms/${roomId}/status`] = 'battle';
-                
+
                 await update(ref(db), updateForBattle);
             }
         }
@@ -258,19 +258,19 @@ export const useGameLogic = (
         // board는 0으로 채워서 '빈 칸'임을 명시
         const emptyBoard = Array(25).fill(0);
 
-        // --- HOST ---
-        updates['host/board'] = emptyBoard;
-        updates['host/score'] = 0;
-        updates['host/completedLines'] = [];
-        updates['host/currentSequenceIndex'] = 0;
-        updates['host/currentCards'] = null;
+        updates["host/board"] = emptyBoard;
+        updates["host/score"] = 0;
+        updates["host/completedLines"] = [];
+        updates["host/currentSequenceIndex"] = 0;
+        updates["host/currentCards"] = null;
+        updates["host/lastPlacedCard"] = null;
 
-        // --- GUEST ---
-        updates['guest/board'] = emptyBoard;
-        updates['guest/score'] = 0;
-        updates['guest/completedLines'] = [];
-        updates['guest/currentSequenceIndex'] = 0;
-        updates['guest/currentCards'] = null;
+        updates["guest/board"] = emptyBoard;
+        updates["guest/score"] = 0;
+        updates["guest/completedLines"] = [];
+        updates["guest/currentSequenceIndex"] = 0;
+        updates["guest/currentCards"] = null;
+        updates["guest/lastPlacedCard"] = null;
 
         // DB 업데이트
         update(ref(db, `rooms/${roomId}`), updates);
