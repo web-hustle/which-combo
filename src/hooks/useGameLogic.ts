@@ -1,6 +1,6 @@
 
 
-import { ref, update, get, set, onDisconnect } from "firebase/database";
+import { ref, update, get, set, onDisconnect, runTransaction } from "firebase/database";
 import { db } from "../firebase";
 import {
     findPatternByIndices,
@@ -43,55 +43,50 @@ export const useGameLogic = (
 
     // 2. 숫자 배치 (비동기 방식)
     const placeNumber = async (boardIndex: number) => {
-        if (!roomData || !roomData.numberSequence) return;
+    if (!roomId || !roomData?.numberSequence) return;
+    
+    await runTransaction(ref(db, `rooms/${roomId}`), (room) => {
+        if (!room) return;
+
         const myRole = isHost ? "host" : "guest";
         const opponentRole = isHost ? "guest" : "host";
 
-        const myData = isHost ? roomData.host : roomData.guest;
-        const opponentData = isHost ? roomData.guest : roomData.host;
+        // 트랜잭션 내부의 최신 데이터(room)를 사용해야 합니다! (중요)
+        const myData = room[myRole];
+        const opponentData = room[opponentRole];
 
-        if (!myData || !opponentData) return;
-
-        // 이미 배치 끝난 사람이 또 눌렀을 때 방어
         if (myData.currentSequenceIndex >= 25) return;
+        if (myData.isReady) return; // 이미 눌렀으면 중복 실행 방지
 
-        // 내가 지금 놓아야 할 숫자 (내 인덱스 기준)
-        const targetNumber = roomData.numberSequence[myData.currentSequenceIndex];
-        const nextIndex = myData.currentSequenceIndex + 1;
-
-        const lastPlacedCard: CellInfo = {
+        const targetNumber = roomData.numberSequence[myData.currentSequenceIndex];ㄴ
+        const lastPlacedCard = {
             card: targetNumber,
             boardIndex: boardIndex,
         };
 
-        const updates: any = {};
-        updates[`rooms/${roomId}/${myRole}/isReady`] = true;
-        updates[`rooms/${roomId}/${myRole}/lastPlacedCard`] = lastPlacedCard;
-        updates[`rooms/${roomId}/${myRole}/board/${lastPlacedCard.boardIndex}`] =
-            lastPlacedCard.card;
+        myData.isReady = true;
+        myData.lastPlacedCard = lastPlacedCard;
+        myData.board[boardIndex] = lastPlacedCard.card;
 
-        await update(ref(db), updates);
+        if (opponentData.isReady) {
+            const nextIndex = myData.currentSequenceIndex + 1;
 
-        if (opponentData?.isReady && opponentData.lastPlacedCard) {
             if (nextIndex < 25) {
-                const updateForNextTurn: any = {};
-                updateForNextTurn[`rooms/${roomId}/${myRole}/isReady`] = false;
-                updateForNextTurn[`rooms/${roomId}/${myRole}/currentSequenceIndex`] = nextIndex;
-
-                updateForNextTurn[`rooms/${roomId}/${opponentRole}/isReady`] = false;
-                updateForNextTurn[`rooms/${roomId}/${opponentRole}/currentSequenceIndex`] =
-                    nextIndex;
-
-                await update(ref(db), updateForNextTurn);
+                // 다음 숫자로 진행
+                myData.isReady = false;
+                myData.currentSequenceIndex = nextIndex;
+                
+                opponentData.isReady = false;
+                opponentData.currentSequenceIndex = nextIndex;
             } else {
-                const updateForBattle: any = {};
-                updateForBattle[`rooms/${roomId}/${myRole}/isReady`] = false;
-                updateForBattle[`rooms/${roomId}/${opponentRole}/isReady`] = false;
-                updateForBattle[`rooms/${roomId}/status`] = 'battle';
-
-                await update(ref(db), updateForBattle);
+                // 게임 종료 -> 배틀 페이즈로
+                myData.isReady = false;
+                opponentData.isReady = false;
+                room.status = 'battle';
             }
         }
+        return room;
+        });
     };
 
     const submitCards = async (myRole: string, ids: number[]) => {
@@ -99,9 +94,7 @@ export const useGameLogic = (
     };
 
     const doBattle = async () => {
-        // 1. 방어 로직 (기존 동일)
         if (!roomData || !roomData.guest || !isHost) return;
-        // 🔥 [핵심] 이미 결과 확인 중이면 배틀 로직 또 돌지 않게 막기
         if (roomData.status !== 'battle') return;
 
         const { host, guest } = roomData;
@@ -138,7 +131,6 @@ export const useGameLogic = (
 
             updates[`status`] = 'result_check';
 
-            // 🔥 상세 정보를 다 저장합니다.
             updates[`lastResult`] = {
                 winner: hostResult.score > guestResult.score ? 'host' : (guestResult.score > hostResult.score ? 'guest' : 'draw'),
                 hostHand: { cards: hostCards, ...hostResult },
@@ -298,7 +290,7 @@ export const useGameLogic = (
                 const currentTurn = roomData.turnCount || 1;
                 const nextTurn = currentTurn + 1;
 
-                if (nextTurn > 3) {
+                if (nextTurn > 12) {
                     updates[`status`] = 'finished';
                 } else {
                     updates[`status`] = 'battle';
