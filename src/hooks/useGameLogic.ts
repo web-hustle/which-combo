@@ -58,7 +58,7 @@ export const useGameLogic = (
         if (myData.currentSequenceIndex >= 25) return;
         if (myData.isReady) return; // 이미 눌렀으면 중복 실행 방지
 
-        const targetNumber = roomData.numberSequence[myData.currentSequenceIndex];ㄴ
+        const targetNumber = roomData.numberSequence[myData.currentSequenceIndex];
         const lastPlacedCard = {
             card: targetNumber,
             boardIndex: boardIndex,

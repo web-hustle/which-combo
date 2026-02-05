@@ -9,6 +9,7 @@ import { WaitingScreen } from "./pages/WaitingScreen";
 import { BattleScreen } from "./pages/BattleScreen";
 
 import './App.css';
+import { FinishScreen } from "./pages/FinishScreen";
 
 function App() {
   const { myId, roomId, roomData, loading, createRoom, joinRoom } = useRoom();
@@ -63,9 +64,7 @@ function App() {
         ></BattleScreen>
       );
     case "finished":
-      return <div><h1>게임 종료 화면 (TODO)</h1>
-        <div>{isHost && <button onClick={restartGame}>다시하기</button>}</div>
-      </div>
+      return <FinishScreen roomData={roomData} myId={myId} restartGame={restartGame}></FinishScreen>;
   }
 }
 

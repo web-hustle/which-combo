@@ -21,9 +21,9 @@ export const FinishScreen = ({ roomData, myId, restartGame }: Props) => {
 
   return (
     <div>
-      <h1>{winnerName}</h1>
+      <h1>{winnerName} 승리!</h1>
       <h2>{hostData.score + " : " + guestData.score}</h2>
-      <div>{isHost && <Button label="asdf" onClick={restartGame} />}</div>
+      <div>{isHost && <Button label="다시하기" onClick={restartGame} />}</div>
     </div>
   );
 };

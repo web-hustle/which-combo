@@ -52,7 +52,7 @@ export const BattleScreen = ({ roomData, myId, submitCards }: Props) => {
                     setSelectedIds([]);
                     return;
                 }
-                submitCards(newIds);
+                submitCards(newIds.sort((a,b) => a - b));
             }
         }
     }
